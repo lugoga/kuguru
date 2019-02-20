@@ -1,0 +1,82 @@
+---
+title: "Untitled"
+author: "Masumbuko Semba"
+date: "January 23, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+mafia = readxl::read_excel("E:/Data Manipulation/kuguru/PP matrix/mafia.xlsx")
+mafia = mafia %>% select(date = 1, year = 2, pp = 3)
+
+mafia = mafia %>% 
+  separate(date, c("years", "month", "day"), sep = "-") %>% 
+  mutate(date = make_date(year = year, month = month, day = day), 
+         month = month(date), year = year(date)) %>% 
+  select(date, month, year, pp) %>% arrange(date)%>% filter(date < dmy(010118))
+
+
+ggplot(data = mafia) +
+  geom_raster(aes(y = month, x = year, fill = pp), interpolate = TRUE) +
+  geom_contour(aes(y = month, x = year, z = pp), col = "grey30", bins = 6) +
+  scale_y_reverse(breaks = 1:12, 
+                  label = month(seq(dmy(010119), dmy(301219), by = "month"), 
+                                abb = TRUE, label = TRUE))+
+  scale_x_continuous(breaks = seq(2003,2018,2))+
+  scale_fill_gradientn(colours = oce.colors9A(120), na.value = NA)+
+  labs(x = NULL, y = NULL)+
+  theme(legend.position = "top", 
+        legend.key.width = unit(2.8, "cm"),
+        legend.key.height = unit(0.4, "cm"),
+        axis.text = element_text(size = 11))+
+  guides(fill = guide_colorbar(title = expression(primary~productivity~(mgm^{-3})),
+                               title.position = "top", title.hjust = 0.5, 
+                               reverse = FALSE))
+```
+
+```{r}
+## to use the imagep function, we need to convert the pp from vector to matrix
+pp.mat = matrix(data = mafia$pp, ncol =  12, byrow = TRUE)
+
+month = 1:12
+year = 2003:2017
+
+dim(pp.mat)
+
+imagep(year, month, pp.mat, filledContour = TRUE, 
+       ylim = c(12,1), xlim = c(2003,2017), 
+       col = oceColors9A(120))
+contour(x = year, y = month, z = pp.mat,levels = c(1300,1400,1500, 1700),add = TRUE)
+```
+
+
+
+```{r}
+tides.mtwara = read_csv("E:/Data Manipulation/Tides/mtwara.csv")
+
+tides.mtwara = tides.mtwara %>% 
+  mutate(date = make_date(year, month, day), tide = sea_level/1000, tide = replace(tide,tide <0, NA)) %>%
+  select(date, tide)
+```
+
+```{r}
+ggplot(data = tides.mtwara, aes(x = date, y = tide))+ 
+  geom_line()+
+  geom_smooth(method = "auto", se = FALSE, col = "red", size = 1.2)
+```
+
+```{r}
+inferred.anomaly = anomaly_series(tides.mtwara$tide, method = "mean") 
+
+inferred.anomaly %>% plot()+
+  theme(axis.text = element_text(size = 11),
+        axis.title = element_text(size = 12),  
+        panel.background = element_rect(colour = 1))+
+  labs(x = "", y = "Sea Level (m)")
+  
+```
+
